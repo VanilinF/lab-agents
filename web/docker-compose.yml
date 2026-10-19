@@ -3,6 +3,8 @@ name: exam-prep
 services:
   db:
     image: postgres:16
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-exam_prep}
       POSTGRES_USER: ${POSTGRES_USER:-exam_prep}
@@ -13,7 +15,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-exam_prep} -d ${POSTGRES_DB:-exam_prep}",
+          "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB",
         ]
       interval: 5s
       timeout: 5s
@@ -25,19 +27,15 @@ services:
   web:
     build: .
     command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
     volumes:
       - .:/app
     ports:
       - "8000:8000"
-    environment:
-      SECRET_KEY: ${SECRET_KEY:-django-insecure-change-me}
-      DEBUG: ${DEBUG:-True}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
-      POSTGRES_DB: ${POSTGRES_DB:-exam_prep}
-      POSTGRES_USER: ${POSTGRES_USER:-exam_prep}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-exam_prep}
-      POSTGRES_HOST: db
-      POSTGRES_PORT: 5432
     depends_on:
       db:
         condition: service_healthy
