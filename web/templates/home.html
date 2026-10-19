@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Главная — Подготовка к экзамену{% endblock %}
+
+{% block content %}
+  <h1>Подготовка к экзамену</h1>
+  {% if user.is_authenticated %}
+    <p>Здравствуйте, {{ user.username }}! Выберите предмет и начните тренировку.</p>
+  {% else %}
+    <p>Тестируйте себя по предметам: архитектура ПО, имитационное моделирование, управление IT-проектами.</p>
+    <p><a href="{% url 'login' %}" role="button">Войти</a>
+       <a href="{% url 'accounts:register' %}" role="button" class="secondary">Регистрация</a></p>
+  {% endif %}
+{% endblock %}
