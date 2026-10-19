@@ -1,8 +1,10 @@
+import io
+
 from django.contrib.auth import get_user_model
-from django.db import connection
+from django.core.management import call_command
+from django.db.models import Count, Q
 from django.forms import inlineformset_factory
 from django.test import TestCase
-from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from .admin import ChoiceInlineFormSet
@@ -279,6 +281,43 @@ class ProgressViewTests(TestCase):
             Attempt.objects.create(
                 user=self.user, subject=self.phys, score=i, total=10
             )
-        with CaptureQueriesContext(connection) as ctx:
+        with self.assertNumQueries(4):
             self.client.get(reverse("quiz:progress"))
-        self.assertLessEqual(len(ctx.captured_queries), 6)
+
+    def test_shows_percent(self) -> None:
+        Attempt.objects.create(user=self.user, subject=self.math, score=3, total=4)
+        response = self.client.get(reverse("quiz:progress"))
+        self.assertContains(response, "75,0%")
+
+
+class SeedQuestionsCommandTests(TestCase):
+    def test_seed_creates_expected_data(self) -> None:
+        call_command("seed_questions", stdout=io.StringIO())
+        self.assertEqual(Subject.objects.count(), 3)
+        self.assertEqual(Question.objects.count(), 30)
+        self.assertEqual(Choice.objects.count(), 120)
+        broken = (
+            Question.objects.annotate(
+                choices_count=Count("choices"),
+                correct_count=Count("choices", filter=Q(choices__is_correct=True)),
+            )
+            .exclude(choices_count=4, correct_count=1)
+            .count()
+        )
+        self.assertEqual(broken, 0)
+
+    def test_seed_is_idempotent(self) -> None:
+        call_command("seed_questions", stdout=io.StringIO())
+        before = (
+            Subject.objects.count(),
+            Question.objects.count(),
+            Choice.objects.count(),
+        )
+        call_command("seed_questions", stdout=io.StringIO())
+        after = (
+            Subject.objects.count(),
+            Question.objects.count(),
+            Choice.objects.count(),
+        )
+        self.assertEqual(after, before)
+        self.assertEqual(after, (3, 30, 120))
