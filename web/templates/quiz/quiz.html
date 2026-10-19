@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Тест: {{ subject.name }}{% endblock %}
+
+{% block content %}
+  <h1>{{ subject.name }}</h1>
+  <form method="post" action="{% url 'quiz:quiz_submit' subject.pk %}">
+    {% csrf_token %}
+    {% for question in questions %}
+      <fieldset>
+        <legend>{{ forloop.counter }}. {{ question.text }}</legend>
+        {% for choice in question.choices.all %}
+          <label>
+            <input type="radio" name="question_{{ question.pk }}" value="{{ choice.pk }}">
+            {{ choice.text }}
+          </label>
+        {% endfor %}
+      </fieldset>
+    {% empty %}
+      <p>У этого предмета пока нет вопросов.</p>
+    {% endfor %}
+    {% if questions %}
+      <button type="submit">Завершить</button>
+    {% endif %}
+  </form>
+{% endblock %}

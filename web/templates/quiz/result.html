@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Результат: {{ result.subject }}{% endblock %}
+
+{% block content %}
+  <h1>Результат: {{ result.subject }}</h1>
+  <p>Балл: <strong>{{ result.score }} / {{ result.total }}</strong></p>
+
+  {% if result.mistakes %}
+    <h2>Ошибки</h2>
+    {% for mistake in result.mistakes %}
+      <article>
+        <p><strong>{{ mistake.question }}</strong></p>
+        <p>Ваш ответ: {{ mistake.your_answer }}</p>
+        <p>Правильный ответ: {{ mistake.correct_answer }}</p>
+        {% if mistake.explanation %}
+          <p><small>{{ mistake.explanation }}</small></p>
+        {% endif %}
+      </article>
+    {% endfor %}
+  {% else %}
+    <p>Все ответы верные!</p>
+  {% endif %}
+
+  <p><a href="{% url 'quiz:subject_list' %}" role="button">К предметам</a></p>
+{% endblock %}

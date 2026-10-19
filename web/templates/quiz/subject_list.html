@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Предметы{% endblock %}
+
+{% block content %}
+  <h1>Предметы</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Предмет</th>
+        <th>Вопросов</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for subject in subjects %}
+        <tr>
+          <td>
+            {{ subject.name }}
+            {% if subject.description %}<br><small>{{ subject.description }}</small>{% endif %}
+          </td>
+          <td>{{ subject.question_count }}</td>
+          <td><a href="{% url 'quiz:quiz' subject.pk %}" role="button">Начать тест</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3">Пока нет предметов.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
