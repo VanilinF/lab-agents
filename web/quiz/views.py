@@ -1,7 +1,16 @@
 import random
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count
+from django.db.models import (
+    Avg,
+    Case,
+    Count,
+    Expression,
+    F,
+    FloatField,
+    Value,
+    When,
+)
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -94,3 +103,33 @@ def result(request: HttpRequest) -> HttpResponse:
     if not payload:
         return redirect("quiz:subject_list")
     return render(request, "quiz/result.html", {"result": payload})
+
+
+def _percent_expression() -> Expression:
+    return Case(
+        When(total=0, then=Value(0.0)),
+        default=F("score") * 100.0 / F("total"),
+        output_field=FloatField(),
+    )
+
+
+@login_required
+def progress(request: HttpRequest) -> HttpResponse:
+    attempts = (
+        request.user.attempts.select_related("subject")
+        .annotate(percent=_percent_expression())
+        .order_by("-created_at")
+    )
+    by_subject = (
+        request.user.attempts.values("subject_id", "subject__name")
+        .annotate(
+            avg_percent=Avg(_percent_expression()),
+            attempts_count=Count("id"),
+        )
+        .order_by("subject__name")
+    )
+    return render(
+        request,
+        "quiz/progress.html",
+        {"attempts": attempts, "by_subject": by_subject},
+    )

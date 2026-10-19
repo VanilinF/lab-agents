@@ -14,6 +14,7 @@
       </ul>
       <ul>
         {% if user.is_authenticated %}
+          <li><a href="{% url 'quiz:progress' %}">Мой прогресс</a></li>
           <li>{{ user.username }}</li>
           <li>
             <form method="post" action="{% url 'logout' %}">

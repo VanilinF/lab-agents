@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Мой прогресс{% endblock %}
+
+{% block content %}
+  <h1>Мой прогресс</h1>
+
+  <h2>Средний процент по предметам</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Предмет</th>
+        <th>Попыток</th>
+        <th>Средний процент</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in by_subject %}
+        <tr>
+          <td>{{ row.subject__name }}</td>
+          <td>{{ row.attempts_count }}</td>
+          <td>{{ row.avg_percent|floatformat:1 }}%</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3">Пока нет попыток.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Все попытки</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Дата</th>
+        <th>Предмет</th>
+        <th>Балл</th>
+        <th>Процент</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for attempt in attempts %}
+        <tr>
+          <td>{{ attempt.created_at|date:"d.m.Y H:i" }}</td>
+          <td>{{ attempt.subject.name }}</td>
+          <td>{{ attempt.score }} / {{ attempt.total }}</td>
+          <td>{{ attempt.percent|floatformat:1 }}%</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4">Пока нет попыток.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

@@ -9,4 +9,5 @@ urlpatterns = [
     path("subject/<int:pk>/", views.quiz, name="quiz"),
     path("subject/<int:pk>/submit/", views.quiz_submit, name="quiz_submit"),
     path("result/", views.result, name="result"),
+    path("progress/", views.progress, name="progress"),
 ]

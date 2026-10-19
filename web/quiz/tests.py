@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.forms import inlineformset_factory
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from .admin import ChoiceInlineFormSet
@@ -222,3 +224,61 @@ class QuizViewTests(TestCase):
         self.client.get(self._quiz_url())
         response = self.client.get(self._submit_url())
         self.assertEqual(response.status_code, 405)
+
+
+class ProgressViewTests(TestCase):
+    def setUp(self) -> None:
+        self.user = get_user_model().objects.create_user(
+            username="student", password="S3cure-pass!"
+        )
+        self.client.login(username="student", password="S3cure-pass!")
+        self.math = Subject.objects.create(name="Математика")
+        self.phys = Subject.objects.create(name="Физика")
+
+    def test_requires_login(self) -> None:
+        self.client.logout()
+        url = reverse("quiz:progress")
+        response = self.client.get(url)
+        self.assertRedirects(response, f"{reverse('login')}?next={url}")
+
+    def test_average_percent_per_subject(self) -> None:
+        Attempt.objects.create(user=self.user, subject=self.math, score=5, total=10)
+        Attempt.objects.create(user=self.user, subject=self.math, score=10, total=10)
+        Attempt.objects.create(user=self.user, subject=self.phys, score=0, total=4)
+        response = self.client.get(reverse("quiz:progress"))
+        self.assertEqual(response.status_code, 200)
+        rows = {row["subject__name"]: row for row in response.context["by_subject"]}
+        self.assertAlmostEqual(rows["Математика"]["avg_percent"], 75.0)
+        self.assertAlmostEqual(rows["Физика"]["avg_percent"], 0.0)
+        self.assertEqual(rows["Математика"]["attempts_count"], 2)
+
+    def test_total_zero_is_handled(self) -> None:
+        Attempt.objects.create(user=self.user, subject=self.math, score=0, total=0)
+        response = self.client.get(reverse("quiz:progress"))
+        self.assertEqual(response.status_code, 200)
+        row = next(
+            r for r in response.context["by_subject"] if r["subject__name"] == "Математика"
+        )
+        self.assertEqual(row["avg_percent"], 0.0)
+        self.assertEqual(response.context["attempts"][0].percent, 0.0)
+
+    def test_shows_only_own_attempts(self) -> None:
+        other = get_user_model().objects.create_user(
+            username="other", password="P4ssword!"
+        )
+        Attempt.objects.create(user=other, subject=self.math, score=5, total=10)
+        response = self.client.get(reverse("quiz:progress"))
+        self.assertEqual(list(response.context["attempts"]), [])
+        self.assertEqual(list(response.context["by_subject"]), [])
+
+    def test_no_n_plus_one_queries(self) -> None:
+        for i in range(5):
+            Attempt.objects.create(
+                user=self.user, subject=self.math, score=i, total=10
+            )
+            Attempt.objects.create(
+                user=self.user, subject=self.phys, score=i, total=10
+            )
+        with CaptureQueriesContext(connection) as ctx:
+            self.client.get(reverse("quiz:progress"))
+        self.assertLessEqual(len(ctx.captured_queries), 6)
